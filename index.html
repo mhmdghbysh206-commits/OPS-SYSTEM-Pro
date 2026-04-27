@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>OPS SYSTEM GO - V44</title>
+    <style>
+        :root { --blue: #0f172a; --accent: #3b82f6; --red: #e11d48; --green: #10b981; --bg: #f8fafc; }
+        body { font-family: 'Inter', 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 10px; }
+        .container { max-width: 1300px; margin: auto; background: white; padding: 25px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
+        
+        /* شاشة الدخول الاحترافية */
+        #loginOverlay { position: fixed; top:0; left:0; width:100%; height:100%; background: radial-gradient(circle, #1e293b 0%, #0f172a 100%); z-index: 1000; display: flex; justify-content: center; align-items: center; }
+        .login-box { background: white; padding: 40px; border-radius: 20px; width: 320px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.3); }
+        .login-box h1 { color: var(--blue); font-size: 22px; margin-bottom: 20px; letter-spacing: 1px; }
+
+        .follow-up-target { border: 2px solid var(--red) !important; background-color: #fff1f2 !important; animation: blink-border 1.5s infinite; }
+        @keyframes blink-border { 50% { border-color: transparent; } }
+
+        h2 { color: var(--blue); border-left: 6px solid var(--accent); padding-left: 12px; font-size: 19px; display: flex; align-items: center; justify-content: space-between; }
+        .btn-main { background: var(--blue); color: white; border: none; padding: 14px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: 700; transition: 0.3s; }
+        .btn-main:hover { background: var(--accent); }
+        
+        textarea { width: 100%; height: 70px; border: 2px solid #e2e8f0; border-radius: 10px; padding: 12px; font-family: 'Courier New', monospace; font-size: 13px; }
+        .report-section { display: none; margin-top: 25px; border-top: 5px solid var(--blue); padding-top: 20px; }
+        
+        .status-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 20px; }
+        .input-group { display: flex; flex-direction: column; }
+        label { font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase; margin-bottom: 4px; }
+        input, select { padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; outline: none; }
+
+        .items-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 12px; background: #f1f5f9; padding: 20px; border-radius: 12px; }
+        .item-row { display: grid; grid-template-columns: 1.2fr 0.8fr 1.2fr 1fr; gap: 8px; align-items: center; background: white; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 11px; }
+        th, td { border: 1px solid #e2e8f0; padding: 12px; text-align: center; }
+        th { background: var(--blue); color: white; text-transform: uppercase; letter-spacing: 0.5px; }
+        .user-badge { background: #dcfce7; color: #166534; padding: 3px 8px; border-radius: 12px; font-size: 10px; font-weight: 900; }
+    </style>
+</head>
+<body onload="checkLogin()">
+
+<div id="loginOverlay">
+    <div class="login-box">
+        <h1>OPS SYSTEM GO</h1>
+        <input type="text" id="username" placeholder="Username" style="width:90%; padding:12px; margin-bottom:10px; border:1px solid #ddd; border-radius:5px;"><br>
+        <input type="password" id="password" placeholder="Password" style="width:90%; padding:12px; margin-bottom:20px; border:1px solid #ddd; border-radius:5px;"><br>
+        <button class="btn-main" onclick="login()">SIGN IN</button>
+        <p id="loginError" style="color:var(--red); font-size:12px; margin-top:15px; font-weight:bold;"></p>
+    </div>
+</div>
+
+<div class="container" id="mainApp" style="display:none;">
+    <h2>
+        OPS SYSTEM GO - MAIN CONTROL
+        <span id="userInfo" style="font-size:12px; color:var(--accent)"></span>
+    </h2>
+
+    <div class="no-print">
+        <textarea id="rawInput" placeholder="PASTE FLIGHT DATA (HECA/CAI SUPPORTED)..."></textarea>
+        <button class="btn-main" style="margin-top:10px" onclick="processData()">RUN ANALYZER</button>
+        <div id="resultsTable" style="display:none;">
+            <table><thead><tr><th>FLIGHT</th><th>REG</th><th>AH</th><th>DH</th><th>ROUTE</th><th>ACTION</th></tr></thead><tbody id="resBody"></tbody></table>
+        </div>
+    </div>
+
+    <div id="reportArea" class="report-section">
+        <input type="hidden" id="editIndex" value="-1">
+        <div class="status-grid">
+            <div class="input-group"><label>Flight Number</label><input id="f_cs"></div>
+            <div class="input-group"><label>Registration</label><input id="f_reg"></div>
+            <div class="input-group"><label>Route (ICAO/IATA)</label><input id="f_route"></div>
+            <div class="input-group"><label>Arrival (AH)</label><input id="f_sta"></div>
+            <div class="input-group"><label>Departure (DH)</label><input id="f_std"></div>
+        </div>
+        <div class="items-container" id="itemsList"></div>
+        <div style="margin-top:25px; display:grid; grid-template-columns:1fr 1fr; gap:15px;">
+            <button class="btn-main" style="background:var(--green)" onclick="exportToExcel()">EXPORT TO EXCEL</button>
+            <button class="btn-main" style="background:var(--red)" onclick="saveToLog()">SAVE / UPDATE LOG</button>
+        </div>
+    </div>
+
+    <div class="log-section">
+        <h2 style="margin-top:40px;">AUDIT TRAIL & HISTORY</h2>
+        <table id="logTable">
+            <thead>
+                <tr>
+                    <th>Flight Info</th>
+                    <th>Status</th>
+                    <th>Logged By</th>
+                    <th>Control</th>
+                </tr>
+            </thead>
+            <tbody id="logBody"></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    const users = { "admin": "zas123", "ghobesh": "ops01", "shaker": "ops02", "jan": "ops03", "amani": "ops04", "abdelrahman": "ops05" };
+    let currentUser = "";
+    let opsLog = JSON.parse(localStorage.getItem('ops_go_logs')) || [];
+
+    function login() {
+        const u = document.getElementById('username').value.toLowerCase();
+        const p = document.getElementById('password').value;
+        if(users[u] && users[u] === p) {
+            currentUser = u;
+            document.getElementById('loginOverlay').style.display = 'none';
+            document.getElementById('mainApp').style.display = 'block';
+            document.getElementById('userInfo').innerText = "OPERATOR: " + u.toUpperCase();
+            renderLog();
+        } else { document.getElementById('loginError').innerText = "ACCESS DENIED!"; }
+    }
+
+    function saveToLog() {
+        const itemsData = {}; let allDone = true;
+        allReqs.forEach(name => {
+            const id = name.replace(/[^a-zA-Z]/g, '').toLowerCase();
+            const val = document.getElementById(`s_${id}`).value;
+            if(val === "Pending") allDone = false;
+            itemsData[name] = { status: val, note: document.getElementById(`c_${id}`).value };
+        });
+
+        const entry = {
+            flt: document.getElementById('f_cs').value,
+            route: document.getElementById('f_route').value,
+            items: itemsData,
+            allDone: allDone,
+            timestamp: new Date().toLocaleString(),
+            user: currentUser 
+        };
+
+        const idx = parseInt(document.getElementById('editIndex').value);
+        if(idx > -1) opsLog[idx] = entry; else opsLog.push(entry);
+        
+        localStorage.setItem('ops_go_logs', JSON.stringify(opsLog));
+        renderLog();
+        alert("LOG UPDATED SUCCESSFULLY!");
+    }
+
+    function renderLog() {
+        const tbody = document.getElementById('logBody'); tbody.innerHTML = "";
+        opsLog.forEach((item, index) => {
+            const delBtn = (currentUser === 'admin') ? `<button style="background:var(--red); color:white; border:none; padding:5px; border-radius:4px; cursor:pointer;" onclick="deleteLog(${index})">DELETE</button>` : '';
+            tbody.innerHTML += `<tr>
+                <td><b>${item.flt}</b><br><small>${item.route}</small></td>
+                <td>${item.allDone?'<b style="color:var(--green)">COMPLETE</b>':'<b style="color:var(--red)">PENDING</b>'}</td>
+                <td><span class="user-badge">${item.user}</span><br><small>${item.timestamp}</small></td>
+                <td>
+                    <button style="background:var(--accent); color:white; border:none; padding:5px; border-radius:4px; cursor:pointer;" onclick="editSaved(${index})">EDIT</button>
+                    ${delBtn}
+                </td>
+            </tr>`;
+        });
+    }
+
+    function deleteLog(i) {
+        if(confirm("PERMANENTLY DELETE THIS RECORD?")) {
+            opsLog.splice(i, 1);
+            localStorage.setItem('ops_go_logs', JSON.stringify(opsLog));
+            renderLog();
+        }
+    }
+
+    const allReqs = ["Fuel", "Catering", "Transfer", "FPL Check", "HOTAC", "VIP Lounge", "Visa", "Explosive Trace Detection", "Disinfection Spray Cans", "Operation Hall Name", "GSC", "ZAS Involvement", "POCs", "Weather Folder", "GDs / PNLs", "Pax In & Pax Out", "MIA", "G.I.S", "National Security", "Ports Security", "Immigration", "Operations Sector", "Russian Committee"];
+    const itemsList = document.getElementById('itemsList');
+    allReqs.forEach(name => {
+        const id = name.replace(/[^a-zA-Z]/g, '').toLowerCase();
+        itemsList.innerHTML += `<div class="item-row">
+            <label>${name}</label>
+            <select id="s_${id}" onchange="checkStatus('${id}')" class="follow-up-target"><option value="Pending">Pending</option><option value="Completed">Completed</option><option value="Done">Done</option></select>
+            <input id="c_${id}" placeholder="Note..." class="follow-up-target">
+            <input type="file" style="font-size:8px;">
+        </div>`;
+    });
+
+    function checkStatus(id) {
+        const s = document.getElementById(`s_${id}`); const c = document.getElementById(`c_${id}`);
+        if (s.value === "Pending") { s.classList.add('follow-up-target'); c.classList.add('follow-up-target'); }
+        else { s.classList.remove('follow-up-target'); c.classList.remove('follow-up-target'); }
+    }
+
+    function processData() {
+        const text = document.getElementById('rawInput').value.toUpperCase();
+        const tbody = document.getElementById('resBody'); tbody.innerHTML = "";
+        text.split('\n').forEach(line => {
+            if (line.length < 5) return;
+            let flt = (line.match(/([A-Z]{2,3}\s?\d{2,4})/) || ["TBA"])[0];
+            let reg = (line.match(/\b(SU|N|A6|A7|JY|EI|HZ|TS|CN|7T)[A-Z0-9-]{2,6}\b/) || ["TBA"])[0];
+            let times = line.match(/\b([01]?\d|2[0-3]):[0-5]\d\b/g) || [];
+            let route = (line.match(/\b[A-Z0-9]{3,4}\/[A-Z0-9]{3,4}(\/[A-Z0-9]{3,4})?\b/) || ["TBA"])[0];
+            let sta = "00:00", std = "00:00";
+            if(line.includes("TA")){sta=times[0]; std=times[1];}else if(line.includes("AH")){sta=times[0];}else if(line.includes("DH")){std=times[0];}
+            tbody.innerHTML += `<tr><td>${flt}</td><td>${reg}</td><td>${sta}</td><td>${std}</td><td>${route}</td>
+            <td><button class="btn-main" style="padding:6px; background:var(--green)" onclick="fillForm('${flt}','${reg}','${sta}','${std}','${route}')">SELECT</button></td></tr>`;
+        });
+        document.getElementById('resultsTable').style.display = 'block';
+    }
+
+    function fillForm(f, r, a, d, rt) {
+        document.getElementById('reportArea').style.display = 'block';
+        document.getElementById('f_cs').value = f; document.getElementById('f_reg').value = r;
+        document.getElementById('f_route').value = rt; document.getElementById('f_sta').value = a; document.getElementById('f_std').value = d;
+        document.getElementById('editIndex').value = "-1";
+    }
+
+    function editSaved(idx) {
+        const item = opsLog[idx];
+        fillForm(item.flt, "", "00:00", "00:00", item.route);
+        document.getElementById('editIndex').value = idx;
+        allReqs.forEach(name => {
+            const id = name.replace(/[^a-zA-Z]/g, '').toLowerCase();
+            document.getElementById(`s_${id}`).value = item.items[name].status;
+            document.getElementById(`c_${id}`).value = item.items[name].note;
+            checkStatus(id);
+        });
+        window.scrollTo({top: 400, behavior: 'smooth'});
+    }
+
+    function exportToExcel() {
+        let html = `<html><head><meta charset='utf-8'></head><body><table border='1'>`;
+        opsLog.forEach(r => {
+            html += `<tr style='background:#0f172a; color:white;'><th colspan='2'>FLIGHT: ${r.flt} (OPERATOR: ${r.user})</th></tr>`;
+            allReqs.forEach(name => { html += `<tr><td><b>${name}</b></td><td>${r.items[name].status} - ${r.items[name].note}</td></tr>`; });
+        });
+        const blob = new Blob([html + `</table></body></html>`], { type: 'application/vnd.ms-excel' });
+        const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `OPS_SYSTEM_GO_REPORT.xls`; a.click();
+    }
+</script>
+</body>
+</html>
